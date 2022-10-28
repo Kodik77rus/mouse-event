@@ -1,16 +1,18 @@
-import React, { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { io } from "socket.io-client";
 import logo from "./logo.svg";
 import "./App.css";
 
+const webSocket = io("http://localhost:8080");
+
 function App() {
-  const socket = useRef<WebSocket>();
-  const [connected, setConnected] = useState(true);
+  const [connected, setConnected] = useState(webSocket.connected);
   const [coords, setCoords] = useState({ screenX: 0, screenY: 0 });
 
   useEffect(() => {
     connect();
     handleMouseEvents();
-  }, []);
+  });
 
   const handleMouseEvents = () => {
     const handleWindowMouseMove = (event: MouseEvent) => {
@@ -19,7 +21,7 @@ function App() {
         screenX,
         screenY,
       });
-      socket.current?.send(JSON.stringify(coords));
+      webSocket.emit("mouseEvent", JSON.stringify(coords));
     };
     window.addEventListener("mousemove", handleWindowMouseMove);
 
@@ -29,18 +31,16 @@ function App() {
   };
 
   const connect = () => {
-    socket.current = new WebSocket("ws://localhost:8080");
-
-    socket.current.onopen = () => {
+    webSocket.on("connect", () => {
       setConnected(true);
-    };
-    socket.current.onclose = () => {
+    });
+    webSocket.on("close", () => {
       setConnected(false);
       console.log("socker close");
-    };
-    socket.current.onerror = () => {
+    });
+    webSocket.on("error", () => {
       console.error("socker err");
-    };
+    });
   };
 
   return !connected ? (
